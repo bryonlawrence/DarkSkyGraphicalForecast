@@ -1,3 +1,4 @@
+var decoder;
 
 var forecastArea = {
     canvas : document.createElement("canvas"),
@@ -5,10 +6,25 @@ var forecastArea = {
         this.canvas.width = 700;
         this.canvas.height = 270;
         this.context = this.canvas.getContext("2d");
+		this.context.font = "15px Arial";
+        this.offset = this.canvas.width / decoder.decodedForecast.length;		
 		
-		// Draw on the canvas
 		$('div#weather').append(this.canvas);
+		
+		var forecastDay;
+		var index = 0;
+		
+	    for (forecastDay of decoder.decodedForecast) {
+			var highTemp = forecastDay.temperatureHigh;
+			var lowTemp = forecastDay.temperatureLow;
+			
+			this.context.fillText(highTemp, index, 30);
+			this.context.fillText(lowTemp, index, 65);
+			index += this.offset;
+		}
+			
     },
+	
 	clear : function() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
@@ -17,7 +33,7 @@ var forecastArea = {
 function getDarkSkyForecast(jsonForecast) {
 	decoder = new DarkSkyForecastDecoder(jsonForecast);
 	decoder.decode();
-	forecastArea.draw();
+	forecastArea.draw(decoder);
 };
 
 function DarkSkyForecastDecoder(jsonForecast) {
