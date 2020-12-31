@@ -1,9 +1,15 @@
 var decoder;
 
+function callbackClosure(i, image, callback) {
+  return function() {
+    return callback(i, image);
+  }
+}
+
 var forecastArea = {
     canvas : document.createElement("canvas"),
     draw : function() {
-        this.canvas.width = 700;
+        this.canvas.width = 1200;
         this.canvas.height = 270;
         this.context = this.canvas.getContext("2d");
 		this.context.font = "15px Arial";
@@ -13,12 +19,29 @@ var forecastArea = {
 		
 		var forecastDay;
 		var index = 0;
+		var image = "";
 		
 	    for (forecastDay of decoder.decodedForecast) {
+			
+			// Add the image
+			image = imageFactory(forecastDay.icon);
+			var img = new Image;
+			var ctx = this.context;
+
+	        img.onload = callbackClosure(index, img, function(index, img) {
+		  
+		       ctx.drawImage(img,index,0);
+	         });
+            			
+            img.src = image;
+			
+			// Add the high and low temperatures
 			var highTemp = forecastDay.temperatureHigh;
 			var lowTemp = forecastDay.temperatureLow;
-			
+		
+		    this.context.fillStyle = "red";
 			this.context.fillText(highTemp, index, 30);
+		    this.context.fillStyle = "blue";
 			this.context.fillText(lowTemp, index, 65);
 			index += this.offset;
 		}
@@ -135,6 +158,65 @@ function DarkSkyForecastDecoder(jsonForecast) {
 
 function getForecastHeader(){
   jQuery.ajax({url: 'https://api.darksky.net/forecast/7ded21298c6e735931887e68321d5e57/39.989250,-105.445558?exclude=[currently,minutely,hourly]',  dataType: 'jsonp', success: getDarkSkyForecast}).done(function( ) {});
+}
+
+function imageFactory(iconName) {
+	
+    var image="";
+	
+	switch (iconName) {
+		case "clear-day":
+		image = "//localhost/images/clear-day.png";
+		break;
+		
+		case "clear-night":
+		image = "//localhost/images/clear-night.png";
+		
+		break;
+		
+		case "rain":
+		image = "//localhost/images/rain.png";
+		
+		break;
+		
+		case "snow":
+		image = "//localhost/images/snow.png";
+		
+		break;
+		
+		case "sleet":
+		image = "//localhost/images/sleet.png";
+		
+		break;
+		
+		case "wind":
+		image = "//localhost/images/wind.png";
+		break;
+		
+		case "fog":
+		image = "//localhost/images/fog.png";
+		
+		break;
+		
+		case "cloudy":
+		image = "//localhost/images/cloudy.png";
+		
+		break;
+		
+		case "partly-cloudy-day":
+		image = "//localhost/images/partly-cloudy-day.png";
+		
+		break;
+		
+		case "partly-cloudy-night":
+		image = "//localhost/images/partly-cloudy-night.png";
+		
+		break;
+		
+		default:
+		break;
+	}
+    return image;	
 }
 
 jQuery(document).ready(getForecastHeader);
