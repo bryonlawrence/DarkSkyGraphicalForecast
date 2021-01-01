@@ -1,8 +1,10 @@
 var decoder;
 
-function callbackClosure(i, image, callback) {
+var daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function callbackClosure(i, image, forecastDay, callback) {
   return function() {
-    return callback(i, image);
+    return callback(i, image, forecastDay);
   }
 }
 
@@ -10,9 +12,9 @@ var forecastArea = {
     canvas : document.createElement("canvas"),
     draw : function() {
         this.canvas.width = 1200;
-        this.canvas.height = 270;
+        this.canvas.height = 300;
         this.context = this.canvas.getContext("2d");
-		this.context.font = "15px Arial";
+		this.context.font = "14px Arial";
         this.offset = this.canvas.width / decoder.decodedForecast.length;		
 		
 		$('div#weather').append(this.canvas);
@@ -22,15 +24,43 @@ var forecastArea = {
 		var image = "";
 		
 	    for (forecastDay of decoder.decodedForecast) {
+			// Add the day
+			day = daysOfWeek[forecastDay.dateTime.getDay()];
+		    this.context.fillStyle = "red";
+			this.context.fillText(day, index, 12);
 			
 			// Add the image
 			image = imageFactory(forecastDay.icon);
 			var img = new Image;
 			var ctx = this.context;
 
-	        img.onload = callbackClosure(index, img, function(index, img) {
+	        img.onload = callbackClosure(index, img, forecastDay, function(index, img, forecastDay) {
 		  
-		       ctx.drawImage(img,index,0);
+		        ctx.drawImage(img,index,20);
+			
+				ctx.fillStyle = "white";
+			   
+			    var dir = windDirectionFactory(forecastDay.windBearing);
+				ctx.fillText(dir, index + 2, 35);
+				
+				var speed = forecastDay.windSpeed;
+				var gust = forecastDay.windGust;
+				ctx.fillText(speed + " G " + gust, index + 2, 50);
+				
+				
+			   
+			   	if (forecastDay.precipProbability > 30) {
+				
+
+					if (forecastDay.precipType = "snow") {
+						ctx.fillText("Snow: " + forecastDay.accumString, index, 145);
+					}
+					else {
+						ctx.fillText("Rain: " + forecastDay.precipAccumulation, index, 145);
+					}
+				
+			}
+
 	         });
             			
             img.src = image;
@@ -38,11 +68,40 @@ var forecastArea = {
 			// Add the high and low temperatures
 			var highTemp = forecastDay.temperatureHigh;
 			var lowTemp = forecastDay.temperatureLow;
+			var summary = forecastDay.summary;
+			var res = summary.split(" ");
 		
 		    this.context.fillStyle = "red";
-			this.context.fillText(highTemp, index, 30);
+			this.context.fillText("High: " + highTemp, index, 165);
 		    this.context.fillStyle = "blue";
-			this.context.fillText(lowTemp, index, 65);
+			this.context.fillText("Low:  " + lowTemp, index, 180);
+			this.context.fillStyle = "green";
+			this.context.fillText("PoP: " + forecastDay.precipProbability, index + 70, 165);
+
+			
+			var y = 210;
+			
+			if (forecastDay.precipProbability > 10) {
+				
+				this.context.fillStyle = "white";
+
+				if (forecastDay.precipType = "snow") {
+					this.context.fillText("Snow: " + forecastDay.accumString, index, 140);
+				}
+				else {
+					this.context.fillText("Rain: " + forecastDay.precipAccumulation, index, 140);
+				}
+				
+			}
+
+			this.context.fillStyle = "black";
+			
+			for (word of res) {
+				this.context.fillText(word, index, y);
+				y += 15;
+			}
+
+			
 			index += this.offset;
 		}
 			
@@ -89,12 +148,16 @@ function DarkSkyForecastDecoder(jsonForecast) {
 			dailyForecast.precipProbability = dayForecast["precipProbability"];
             dailyForecast.precipType = dayForecast["precipType"];
 		    dailyForecast.precipAccumulation = dayForecast["precipAccumulation"];
+			
+			dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
+			dailyForecast.precipProbability = Math.round(dailyForecast.precipProbability);
+			dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
  
 			if (dailyForecast.precipIntensity > 0 && dailyForecast.precipAccumulation >= 0.01)
 			{	
-				dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
-				dailyForecast.precipProbability = Math.round(dailyForecast.precipProbability);
-				dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
+				//dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
+				//dailyForecast.precipProbability = Math.round(dailyForecast.precipProbability);
+				//dailyForecast.precipProbability = dailyForecast.precipProbability * 10;
 			}
 		
 			if (dailyForecast.precipAccumulation >= 0.01)
@@ -102,7 +165,7 @@ function DarkSkyForecastDecoder(jsonForecast) {
 				
 				if (dailyForecast.precipAccumulation < 1)
 				{
-					dailyForecast.accumString = "Less than 1 inch"	
+					dailyForecast.accumString = "< 1 inch"	
 				}
 				else
 				{  
@@ -132,7 +195,9 @@ function DarkSkyForecastDecoder(jsonForecast) {
 			dailyForecast.humidity = dayForecast["humidity"];
 			dailyForecast.pressure = dayForecast["pressure"];
 			dailyForecast.windSpeed = dayForecast["windSpeed"];
+			dailyForecast.windSpeed = Math.round(dailyForecast.windSpeed);
 			dailyForecast.windGust = dayForecast["windGust"];
+            dailyForecast.windGust = Math.round(dailyForecast.windGust);
 			dailyForecast.windGustTime = new Date(dayForecast["windGustTime"]*1000);
 			dailyForecast.windBearing = dayForecast["windBearing"];
 			dailyForecast.cloudCover = dayForecast["cloudCover"];
@@ -217,6 +282,86 @@ function imageFactory(iconName) {
 		break;
 	}
     return image;	
+}
+
+function windDirectionFactory(direction) {
+	
+	var stringDir;
+	
+	if (direction >= 0 && direction < 20)
+	{
+		stringDir = "N";
+	}
+	else if (direction >= 20 && direction < 40)
+	{
+		stringDir = "NNE";
+	}
+	else if (direction >= 40 && direction < 60)
+	{
+		stringDir = "NE";
+	}
+    else if (direction >= 60 && direction < 80)
+	{
+        stringDir = "ENE";
+	}
+    else if (direction >= 60 && direction < 80)
+	{
+        stringDir = "ENE";
+	}
+    else if (direction >= 80 && direction < 110)
+	{
+        stringDir = "E";
+	}
+    else if (direction >= 110 && direction < 130)
+	{
+        stringDir = "ESE";
+	}
+    else if (direction >= 130 && direction < 150)
+	{
+        stringDir = "SE";
+	}
+    else if (direction >= 150 && direction < 170)
+	{
+        stringDir = "SSE";
+	}
+    else if (direction >= 170 && direction < 200)
+	{
+        stringDir = "S";
+	}
+    else if (direction >= 200 && direction < 220)
+	{
+        stringDir = "SSW";
+	}
+    else if (direction >= 220 && direction < 240)
+	{
+        stringDir = "SW";
+	}
+    else if (direction >= 240 && direction < 260)
+	{
+        stringDir = "WSW";
+	}
+    else if (direction >= 260 && direction < 290)
+	{
+        stringDir = "W";
+	}
+    else if (direction >= 290 && direction < 310)
+	{
+        stringDir = "WNW";
+	}
+    else if (direction >= 310 && direction < 330)
+	{
+        stringDir = "NW";
+	}
+    else if (direction >= 330 && direction < 340)
+	{
+        stringDir = "NNW";
+	}
+    else
+	{
+        stringDir = "N";
+	}
+	
+	return stringDir;
 }
 
 jQuery(document).ready(getForecastHeader);
